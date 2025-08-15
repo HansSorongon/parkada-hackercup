@@ -56,13 +56,13 @@ export default function ParkingCard({
         
         {/* Parking Details - Left Side */}
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-foreground text-sm mb-1">{name}</h4>
+          <h4 className="font-bold text-foreground text-sm mb-1">{name}</h4>
           
           <p className="text-xs text-muted-foreground mb-2">{distance} away • {driveTime} drive</p>
           
           {/* Tags */}
-          <div className="flex gap-1 flex-wrap">
-            {tags.map((tag, index) => (
+          <div className="flex gap-1 items-center">
+            {tags.slice(0, 2).map((tag, index) => (
               <Badge 
                 key={tag} 
                 variant={getTagVariant(index)}
@@ -71,6 +71,9 @@ export default function ParkingCard({
                 {tag}
               </Badge>
             ))}
+            {tags.length > 2 && (
+              <span className="text-xs text-muted-foreground ml-1">...</span>
+            )}
           </div>
         </div>
 

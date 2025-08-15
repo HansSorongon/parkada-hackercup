@@ -9,7 +9,24 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: "Parkada",
-  description: "Park ka na!",
+  description: "Find and reserve parking spots instantly with Parkada",
+  manifest: "/manifest.json",
+  themeColor: "#3b82f6",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Parkada",
+  },
+  icons: {
+    apple: "/parkada_logo.png",
+    icon: "/parkada_logo.png",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  }
 };
 
 export default function RootLayout({

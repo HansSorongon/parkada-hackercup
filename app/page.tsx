@@ -124,9 +124,9 @@ export default function Home() {
         <Image
           src="/parkada_logo.png"
           alt="Parkada"
-          width={480}
-          height={150}
-          className="h-36 w-auto drop-shadow-lg"
+          width={126}
+          height={60}
+          className="h-20 w-auto drop-shadow-lg"
           priority
         />
       </div>

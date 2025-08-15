@@ -1,9 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { QrCode, Clock, MapPin, Car, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +34,20 @@ interface BookingDialogProps {
 }
 
 export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingDialogProps) {
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  
+  // Sample user vehicles - in real app this would come from user profile
+  const userVehicles = [
+    { id: '1', plateNumber: 'ABC123', model: 'Honda Civic 2022' },
+    { id: '2', plateNumber: 'XYZ789', model: 'Toyota Camry 2021' },
+    { id: '3', plateNumber: 'DEF456', model: 'Mercedes-Benz E-Class AMG 53 4MATIC+ Sedan' },
+    { id: '4', plateNumber: 'GHI321', model: 'BMW X5' },
+  ];
+
+  const truncateModel = (model: string, maxLength: number = 25) => {
+    return model.length > maxLength ? model.substring(0, maxLength) + '...' : model;
+  };
+
   if (!parkingSpot) return null;
 
   const getImageClasses = () => {
@@ -125,6 +146,31 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Vehicle Selection */}
+          <div className="space-y-3">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              Select Vehicle
+            </h4>
+            <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choose your vehicle" />
+              </SelectTrigger>
+              <SelectContent>
+                {userVehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Car className="h-4 w-4 flex-shrink-0" />
+                      <span className="font-medium">{vehicle.plateNumber}</span>
+                      <span className="text-muted-foreground">-</span>
+                      <span className="truncate">{truncateModel(vehicle.model)}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Payment Method */}

@@ -17,11 +17,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-sidebar transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} shadow-lg`}>
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
           <Image
-            src="/parkada_logo.png"
+            src="/parkada_logo_2.png"
             alt="Parkada"
-            width={120}
-            height={40}
-            className="h-10 w-auto"
+            width={144}
+            height={48}
+            className="h-12 w-auto"
           />
           <Button
             onClick={onClose}
@@ -36,14 +36,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="p-4">
           <ul className="space-y-2">
             <li>
-              <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-sidebar-accent text-sidebar-foreground h-auto p-3">
-                <User className="h-5 w-5" />
+              <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-sidebar-accent text-sidebar-foreground h-auto p-3 font-bold">
+                <User className="h-5 w-5 stroke-[2.5]" />
                 Profile
               </Button>
             </li>
             <li>
-              <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-sidebar-accent text-sidebar-foreground h-auto p-3">
-                <Settings className="h-5 w-5" />
+              <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-sidebar-accent text-sidebar-foreground h-auto p-3 font-bold">
+                <Settings className="h-5 w-5 stroke-[2.5]" />
                 Settings
               </Button>
             </li>
