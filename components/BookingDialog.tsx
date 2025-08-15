@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { QrCode, Clock, MapPin, Car, CreditCard } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Car, CreditCard, Play } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { MockAuth } from '@/lib/auth';
+import { ParkingSessionManager } from '@/lib/parking-session';
 import {
   Select,
   SelectContent,
@@ -34,7 +37,81 @@ interface BookingDialogProps {
 }
 
 export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingDialogProps) {
+  const router = useRouter();
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  const [isStarting, setIsStarting] = useState(false);
+
+  const handleStartParking = async () => {
+    const currentUser = MockAuth.getCurrentUser();
+    if (!currentUser) {
+      alert('Please log in to start parking');
+      return;
+    }
+
+    if (!selectedVehicle) {
+      alert('Please select a vehicle');
+      return;
+    }
+
+    if (!parkingSpot) return;
+
+    setIsStarting(true);
+
+    try {
+      // Get parking spot coordinates from global data
+      const parkingSpots = (window as Record<string, unknown>).parkingSpots as Array<{id: string, name: string, lat: number, lng: number, rate: string}> | undefined;
+      const spotData = parkingSpots?.find(spot => spot.name === parkingSpot.name);
+
+      if (!spotData) {
+        alert('Parking spot data not found');
+        return;
+      }
+
+      // Start parking session
+      const session = ParkingSessionManager.startSession(
+        currentUser.id,
+        currentUser.name,
+        currentUser.email,
+        {
+          id: spotData.id,
+          name: spotData.name,
+          lat: spotData.lat,
+          lng: spotData.lng,
+          rate: parkingSpot.price,
+          address: parkingSpot.name
+        }
+      );
+
+      console.log('🚗 Parking session started:', session);
+      
+      // Show success message
+      alert(`Parking session started at ${parkingSpot.name}!\nRate: ${parkingSpot.price}/hour`);
+      
+      onClose();
+    } catch (error) {
+      console.error('Error starting parking session:', error);
+      alert('Failed to start parking session. Please try again.');
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleReserveForLater = () => {
+    if (!parkingSpot) return;
+
+    // Navigate to reservation page with parking spot data
+    const spotData = encodeURIComponent(JSON.stringify({
+      name: parkingSpot.name,
+      distance: parkingSpot.distance,
+      driveTime: parkingSpot.driveTime,
+      price: parkingSpot.price,
+      tags: parkingSpot.tags,
+      imageVariant: parkingSpot.imageVariant
+    }));
+    
+    router.push(`/reserve?spot=${spotData}`);
+    onClose();
+  };
   
   // Sample user vehicles - in real app this would come from user profile
   const userVehicles = [
@@ -123,27 +200,17 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
               Booking Options
             </h4>
             
-            <div className="grid gap-3">
-              {/* Instant Parking */}
-              <div className="border rounded-xl p-4 hover:bg-accent/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Park Now</p>
-                    <p className="text-sm text-muted-foreground">Scan QR code on arrival</p>
-                  </div>
-                  <QrCode className="h-6 w-6 text-primary" />
+            {/* Reserved Parking */}
+            <div 
+              className="border rounded-xl p-4 hover:bg-accent/50 transition-colors cursor-pointer"
+              onClick={handleReserveForLater}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Reserve for Later</p>
+                  <p className="text-sm text-muted-foreground">Schedule your parking time on next page</p>
                 </div>
-              </div>
-
-              {/* Reserved Parking */}
-              <div className="border rounded-xl p-4 hover:bg-accent/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Reserve for Later</p>
-                    <p className="text-sm text-muted-foreground">Schedule your parking time</p>
-                  </div>
-                  <Clock className="h-6 w-6 text-primary" />
-                </div>
+                <Clock className="h-6 w-6 text-primary" />
               </div>
             </div>
           </div>
@@ -200,9 +267,13 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button className="flex-1">
-            <QrCode className="h-4 w-4" />
-            Start Parking - {parkingSpot.price}/hr
+          <Button 
+            className="flex-1"
+            onClick={handleStartParking}
+            disabled={!selectedVehicle || isStarting}
+          >
+            <Play className="h-4 w-4" />
+            {isStarting ? 'Starting...' : `Start Parking - ${parkingSpot.price}/hr`}
           </Button>
         </DialogFooter>
       </DialogContent>

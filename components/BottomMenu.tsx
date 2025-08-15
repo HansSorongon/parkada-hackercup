@@ -15,8 +15,9 @@ interface BottomMenuProps {
 }
 
 export default function BottomMenu({ height, isDragging, onDragStart, onHeaderClick }: BottomMenuProps) {
-  const [selectedSpot, setSelectedSpot] = useState<typeof parkingSpots[0] | null>(null);
+  const [selectedSpot, setSelectedSpot] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [parkingSpots, setParkingSpots] = useState<Array<{id: string, name: string, distance: string, driveTime: string, price: string, tags: string[], imageVariant: 'accent' | 'secondary' | 'primary', distanceInMeters: number, available: number, total: number}>>([]);
   const router = useRouter();
 
   // User location (Gokongwei Building)
@@ -33,30 +34,20 @@ export default function BottomMenu({ height, isDragging, onDragStart, onHeaderCl
     return meters;
   };
 
-  // Parking data from the map component
+  // Get parking data from the map component (globally stored)
   const generateParkingSpotsData = () => {
-    const parkingLocations = [
-      { name: "DLSU Parking Building", lat: 14.5640, lng: 120.9935, available: 25, total: 80 },
-      { name: "Robinson's Place Manila", lat: 14.5599, lng: 120.9978, available: 0, total: 120 },
-      { name: "Taft Avenue Commercial", lat: 14.5665, lng: 120.9925, available: 15, total: 60 },
-      { name: "Vito Cruz Station Area", lat: 14.5634, lng: 120.9943, available: 2, total: 45 },
-      { name: "Pedro Gil Street Parking", lat: 14.5680, lng: 120.9918, available: 0, total: 70 },
-      { name: "Malate Church Area", lat: 14.5618, lng: 120.9955, available: 18, total: 55 },
-      { name: "St. Scholastica Parking", lat: 14.5695, lng: 120.9910, available: 32, total: 90 },
-      { name: "Taft-Pablo Ocampo Corner", lat: 14.5655, lng: 120.9920, available: 0, total: 40 },
-      { name: "EGI Taft Tower", lat: 14.5620, lng: 120.9940, available: 12, total: 65 },
-      { name: "Harrison Plaza Overflow", lat: 14.5605, lng: 120.9965, available: 8, total: 75 },
-      { name: "CSB Parking Area", lat: 14.5685, lng: 120.9915, available: 22, total: 80 },
-      { name: "Adriatico Street Parking", lat: 14.5630, lng: 120.9960, available: 14, total: 50 },
-      { name: "Agno Street Commercial", lat: 14.5610, lng: 120.9945, available: 6, total: 45 },
-      { name: "Taft Avenue MRT Parking", lat: 14.5640, lng: 120.9950, available: 0, total: 85 },
-      { name: "Remedios Circle Area", lat: 14.5595, lng: 120.9985, available: 28, total: 95 },
-      { name: "United Nations Avenue", lat: 14.5675, lng: 120.9905, available: 19, total: 70 },
-      { name: "Quirino Avenue Junction", lat: 14.5590, lng: 120.9950, available: 0, total: 60 },
-      { name: "Pres. Quirino Ave Parking", lat: 14.5585, lng: 120.9960, available: 11, total: 55 }
-    ];
+    if (typeof window === 'undefined') {
+      return [];
+    }
+    
+    const globalParkingSpots = (window as Record<string, unknown>).parkingSpots as Array<{id: string, name: string, lat: number, lng: number, available: number, total: number, rate: string}> | undefined;
+    
+    if (!globalParkingSpots) {
+      // Fallback data if map hasn't loaded yet
+      return [];
+    }
 
-    return parkingLocations.map(location => {
+    return globalParkingSpots.map(location => {
       const distanceInMeters = calculateDistance(userLat, userLng, location.lat, location.lng);
       const distanceKm = distanceInMeters / 1000;
       const driveTimeMinutes = Math.max(1, Math.round(distanceKm * 3)); // Rough estimate: 3 min per km
@@ -77,12 +68,13 @@ export default function BottomMenu({ height, isDragging, onDragStart, onHeaderCl
       if (location.total > 80) tags.push('Large');
 
       return {
+        id: location.id,
         name: location.name,
         distance: distanceKm < 1 ? `${Math.round(distanceInMeters)}m` : `${distanceKm.toFixed(1)}km`,
         driveTime: `${driveTimeMinutes} min`,
         price: dynamicPrice,
         tags: tags.slice(0, 3), // Limit to 3 tags
-        imageVariant: (location.available > 15 ? 'accent' : location.available > 5 ? 'secondary' : 'primary') as const,
+        imageVariant: location.available > 15 ? 'accent' as const : location.available > 5 ? 'secondary' as const : 'primary' as const,
         distanceInMeters,
         available: location.available,
         total: location.total
@@ -90,13 +82,36 @@ export default function BottomMenu({ height, isDragging, onDragStart, onHeaderCl
     });
   };
 
-  // Generate and sort parking spots by distance
-  const parkingSpots = generateParkingSpotsData()
-    .sort((a, b) => a.distanceInMeters - b.distanceInMeters);
+  // Load parking spots when component mounts and when map data becomes available
+  useEffect(() => {
+    const loadParkingSpots = () => {
+      const spots = generateParkingSpotsData().sort((a, b) => a.distanceInMeters - b.distanceInMeters);
+      setParkingSpots(spots);
+    };
+    
+    // Load immediately
+    loadParkingSpots();
+    
+    // Also listen for when map data becomes available
+    const interval = setInterval(() => {
+      if (typeof window !== 'undefined' && (window as Record<string, unknown>).parkingSpots) {
+        loadParkingSpots();
+        clearInterval(interval);
+      }
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSpotClick = (spot: typeof parkingSpots[0]) => {
     setSelectedSpot(spot);
     setIsDialogOpen(true);
+    
+    // Focus on the parking spot on the map
+    if (spot.id && typeof window !== 'undefined') {
+      const focusFunction = (window as Record<string, unknown>).focusOnParkingSpot as ((spotId: string) => void) | undefined;
+      focusFunction?.(spot.id);
+    }
   };
 
   const handleDialogClose = () => {

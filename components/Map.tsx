@@ -28,6 +28,19 @@ export default function Map({ bottomMenuHeight }: MapProps) {
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
         });
 
+        // Check if map container already exists and remove any existing map
+        const mapContainer = document.getElementById('map');
+        if (mapContainer && (window as Record<string, unknown>).mapInstance) {
+          try {
+            const existingMap = (window as Record<string, unknown>).mapInstance as any;
+            if (existingMap.remove) {
+              existingMap.remove();
+            }
+          } catch (error) {
+            console.log('Existing map cleanup error:', error);
+          }
+        }
+
         // Initialize the map
         const map = L.map('map', {
           zoomControl: false, // Disable default zoom control
@@ -81,28 +94,28 @@ export default function Map({ bottomMenuHeight }: MapProps) {
         const generateParkingSpotsAroundDLSU = () => {
           const dlsuLat = 14.5647;
           const dlsuLng = 120.9930;
-          const spots = [];
+          const spots: Array<{id: string, lat: number, lng: number, name: string, available: number, total: number, rate: string}> = [];
           
           // Specific parking locations around DLSU and Taft Avenue
           const parkingLocations = [
-            { name: "DLSU Parking Building", lat: 14.5640, lng: 120.9935, distance: "50m" },
-            { name: "Robinson's Place Manila", lat: 14.5599, lng: 120.9978, distance: "400m" },
-            { name: "Taft Avenue Commercial", lat: 14.5665, lng: 120.9925, distance: "200m" },
-            { name: "Vito Cruz Station Area", lat: 14.5634, lng: 120.9943, distance: "150m" },
-            { name: "Pedro Gil Street Parking", lat: 14.5680, lng: 120.9918, distance: "350m" },
-            { name: "Malate Church Area", lat: 14.5618, lng: 120.9955, distance: "250m" },
-            { name: "St. Scholastica Parking", lat: 14.5695, lng: 120.9910, distance: "500m" },
-            { name: "Taft-Pablo Ocampo Corner", lat: 14.5655, lng: 120.9920, distance: "180m" },
-            { name: "EGI Taft Tower", lat: 14.5620, lng: 120.9940, distance: "300m" },
-            { name: "Harrison Plaza Overflow", lat: 14.5605, lng: 120.9965, distance: "450m" },
-            { name: "CSB Parking Area", lat: 14.5685, lng: 120.9915, distance: "400m" },
-            { name: "Adriatico Street Parking", lat: 14.5630, lng: 120.9960, distance: "350m" },
-            { name: "Agno Street Commercial", lat: 14.5610, lng: 120.9945, distance: "400m" },
-            { name: "Taft Avenue MRT Parking", lat: 14.5640, lng: 120.9950, distance: "200m" },
-            { name: "Remedios Circle Area", lat: 14.5595, lng: 120.9985, distance: "550m" },
-            { name: "United Nations Avenue", lat: 14.5675, lng: 120.9905, distance: "450m" },
-            { name: "Quirino Avenue Junction", lat: 14.5590, lng: 120.9950, distance: "600m" },
-            { name: "Pres. Quirino Ave Parking", lat: 14.5585, lng: 120.9960, distance: "650m" }
+            { id: "PARK001", name: "DLSU Parking Building", lat: 14.5640, lng: 120.9935, distance: "50m" },
+            { id: "PARK002", name: "Robinson's Place Manila", lat: 14.5599, lng: 120.9978, distance: "400m" },
+            { id: "PARK003", name: "Taft Avenue Commercial", lat: 14.5665, lng: 120.9925, distance: "200m" },
+            { id: "PARK004", name: "Vito Cruz Station Area", lat: 14.5634, lng: 120.9943, distance: "150m" },
+            { id: "PARK005", name: "Pedro Gil Street Parking", lat: 14.5680, lng: 120.9918, distance: "350m" },
+            { id: "PARK006", name: "Malate Church Area", lat: 14.5618, lng: 120.9955, distance: "250m" },
+            { id: "PARK007", name: "St. Scholastica Parking", lat: 14.5695, lng: 120.9910, distance: "500m" },
+            { id: "PARK008", name: "Taft-Pablo Ocampo Corner", lat: 14.5655, lng: 120.9920, distance: "180m" },
+            { id: "PARK009", name: "EGI Taft Tower", lat: 14.5620, lng: 120.9940, distance: "300m" },
+            { id: "PARK010", name: "Harrison Plaza Overflow", lat: 14.5605, lng: 120.9965, distance: "450m" },
+            { id: "PARK011", name: "CSB Parking Area", lat: 14.5685, lng: 120.9915, distance: "400m" },
+            { id: "PARK012", name: "Adriatico Street Parking", lat: 14.5630, lng: 120.9960, distance: "350m" },
+            { id: "PARK013", name: "Agno Street Commercial", lat: 14.5610, lng: 120.9945, distance: "400m" },
+            { id: "PARK014", name: "Taft Avenue MRT Parking", lat: 14.5640, lng: 120.9950, distance: "200m" },
+            { id: "PARK015", name: "Remedios Circle Area", lat: 14.5595, lng: 120.9985, distance: "550m" },
+            { id: "PARK016", name: "United Nations Avenue", lat: 14.5675, lng: 120.9905, distance: "450m" },
+            { id: "PARK017", name: "Quirino Avenue Junction", lat: 14.5590, lng: 120.9950, distance: "600m" },
+            { id: "PARK018", name: "Pres. Quirino Ave Parking", lat: 14.5585, lng: 120.9960, distance: "650m" }
           ];
 
           parkingLocations.forEach((location, index) => {
@@ -124,6 +137,7 @@ export default function Map({ bottomMenuHeight }: MapProps) {
             }
             
             spots.push({
+              id: location.id,
               lat: location.lat,
               lng: location.lng,
               name: location.name,
@@ -133,53 +147,142 @@ export default function Map({ bottomMenuHeight }: MapProps) {
             });
           });
           
+          // Add Rentor parking spots from localStorage
+          if (typeof window !== 'undefined') {
+            const rentorSpots = JSON.parse(localStorage.getItem('rentorParkingSpots') || '[]');
+            console.log('🏢 Loading Rentor parking spots:', rentorSpots.length);
+            
+            rentorSpots.forEach((rentorSpot: any) => {
+              spots.push({
+                id: rentorSpot.id,
+                lat: rentorSpot.lat,
+                lng: rentorSpot.lng,
+                name: rentorSpot.name,
+                available: rentorSpot.available,
+                total: rentorSpot.total,
+                rate: rentorSpot.rate
+              });
+              console.log('➕ Added Rentor spot:', rentorSpot.name);
+            });
+          }
+          
           return spots;
         };
 
-        const parkingSpots = generateParkingSpotsAroundDLSU();
+        const loadAndRefreshParkingSpots = () => {
+          const parkingSpots = generateParkingSpotsAroundDLSU();
+          
+          // Store parking spots and map instance globally for access from other components
+          (window as Record<string, unknown>).parkingSpots = parkingSpots;
+          (window as Record<string, unknown>).mapInstance = map;
+          
+          console.log('🗺️ Total parking spots loaded:', parkingSpots.length);
+          return parkingSpots;
+        };
+
+        let parkingSpots = loadAndRefreshParkingSpots();
+        
+        // Function to refresh parking spots and markers
+        const refreshParkingSpots = () => {
+          console.log('🔄 Refreshing parking spots...');
+          
+          // Clear existing markers (except user location)
+          map.eachLayer((layer) => {
+            if (layer instanceof L.Marker) {
+              // Keep user location marker, remove parking markers
+              const markerLatLng = layer.getLatLng();
+              if (!(Math.abs(markerLatLng.lat - 14.566401265497952) < 0.0001 && Math.abs(markerLatLng.lng - 120.9932240439279) < 0.0001)) {
+                map.removeLayer(layer);
+              }
+            }
+          });
+          
+          // Reload parking spots
+          parkingSpots = loadAndRefreshParkingSpots();
+          
+          // Re-add all parking markers
+          addParkingMarkers(parkingSpots);
+        };
+        
+        // Global refresh function
+        (window as Record<string, unknown>).refreshParkingSpots = refreshParkingSpots;
+        
+        // Function to add parking markers
+        const addParkingMarkers = (spots: typeof parkingSpots) => {
+          spots.forEach(spot => {
+            const icon = createParkingIcon(spot.available, spot.total);
+            const marker = L.marker([spot.lat, spot.lng], { icon }).addTo(map);
+            
+            const statusText = spot.available > 0 ? 
+              `${spot.available} of ${spot.total} spots available` : 
+              'Full - No spots available';
+            
+            const statusColor = spot.available > 0 ? '#10b981' : '#ef4444';
+            
+            // Create a more dynamic pricing display
+            const dynamicPrice = spot.rate || (spot.available > 25 ? '₱65' : spot.available > 10 ? '₱85' : '₱120');
+            
+            marker.bindPopup(`
+              <div style="min-width: 200px;">
+                <h3 style="margin: 0 0 8px 0; font-weight: bold;">${spot.name}</h3>
+                <div style="color: ${statusColor}; font-weight: 500; margin-bottom: 4px;">
+                  ${statusText}
+                </div>
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                  <div style="color: #3b82f6; font-weight: bold; font-size: 18px;">${dynamicPrice}</div>
+                  <div style="color: rgba(59, 130, 246, 0.7); font-size: 12px;">/hour</div>
+                </div>
+                <button 
+                  onclick="window.openParkingDialog && window.openParkingDialog('${spot.name}', '1.5 km', '4 min', '${dynamicPrice}')"
+                  style="
+                    background-color: #3b82f6;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    width: 100%;
+                    font-weight: 500;
+                  " ${spot.available === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                  ${spot.available > 0 ? 'Reserve Spot' : 'Full'}
+                </button>
+              </div>
+            `);
+          });
+        };
+        
+        // Function to focus on a specific parking spot
+        (window as Record<string, unknown>).focusOnParkingSpot = (spotId: string) => {
+          const spot = parkingSpots.find(s => s.id === spotId);
+          if (spot && map) {
+            map.setView([spot.lat, spot.lng], 18, { animate: true });
+            // Find and open the marker popup
+            map.eachLayer((layer) => {
+              if (layer instanceof L.Marker) {
+                const markerLatLng = layer.getLatLng();
+                if (Math.abs(markerLatLng.lat - spot.lat) < 0.0001 && Math.abs(markerLatLng.lng - spot.lng) < 0.0001) {
+                  layer.openPopup();
+                }
+              }
+            });
+          }
+        };
 
         // Add parking markers to map
-        parkingSpots.forEach(spot => {
-          const icon = createParkingIcon(spot.available, spot.total);
-          const marker = L.marker([spot.lat, spot.lng], { icon }).addTo(map);
-          
-          const statusText = spot.available > 0 ? 
-            `${spot.available} of ${spot.total} spots available` : 
-            'Full - No spots available';
-          
-          const statusColor = spot.available > 0 ? '#10b981' : '#ef4444';
-          
-          // Create a more dynamic pricing display
-          const dynamicPrice = spot.available > 25 ? '₱65' : spot.available > 10 ? '₱85' : '₱120';
-          
-          marker.bindPopup(`
-            <div style="min-width: 200px;">
-              <h3 style="margin: 0 0 8px 0; font-weight: bold;">${spot.name}</h3>
-              <div style="color: ${statusColor}; font-weight: 500; margin-bottom: 4px;">
-                ${statusText}
-              </div>
-              <div style="background: rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
-                <div style="color: #3b82f6; font-weight: bold; font-size: 18px;">${dynamicPrice}</div>
-                <div style="color: rgba(59, 130, 246, 0.7); font-size: 12px;">/hour</div>
-              </div>
-              <button 
-                onclick="window.openParkingDialog && window.openParkingDialog('${spot.name}', '1.5 km', '4 min', '${dynamicPrice}')"
-                style="
-                  background-color: #3b82f6;
-                  color: white;
-                  border: none;
-                  padding: 8px 16px;
-                  border-radius: 12px;
-                  cursor: pointer;
-                  font-size: 14px;
-                  width: 100%;
-                  font-weight: 500;
-                " ${spot.available === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
-                ${spot.available > 0 ? 'Reserve Spot' : 'Full'}
-              </button>
-            </div>
-          `);
-        });
+        addParkingMarkers(parkingSpots);
+        
+        // Periodic check for new Rentor applications
+        const checkForNewSpots = setInterval(() => {
+          if ((window as Record<string, unknown>).refreshParkingSpots === true) {
+            console.log('🔔 New Rentor application detected, refreshing map...');
+            refreshParkingSpots();
+            (window as Record<string, unknown>).refreshParkingSpots = false;
+          }
+        }, 1000); // Check every second
+        
+        // Store cleanup function
+        (window as Record<string, unknown>).cleanupMapInterval = () => clearInterval(checkForNewSpots);
 
         // Add user location pin at Gokongwei Building
         const userLocationIcon = L.divIcon({
@@ -234,6 +337,26 @@ export default function Map({ bottomMenuHeight }: MapProps) {
     };
 
     loadMap();
+    
+    // Cleanup function to remove map instance
+    return () => {
+      const mapContainer = document.getElementById('map');
+      if (mapContainer && (window as Record<string, unknown>).mapInstance) {
+        try {
+          const mapInstance = (window as Record<string, unknown>).mapInstance as any;
+          if (mapInstance.remove) {
+            mapInstance.remove();
+          }
+          (window as Record<string, unknown>).mapInstance = null;
+          
+          // Clean up interval
+          const cleanupFn = (window as Record<string, unknown>).cleanupMapInterval as (() => void) | undefined;
+          cleanupFn?.();
+        } catch (error) {
+          console.log('Map cleanup error:', error);
+        }
+      }
+    };
   }, []);
 
   return (

@@ -8,13 +8,14 @@ import Sidebar from '@/components/Sidebar';
 import BottomMenu from '@/components/BottomMenu';
 import Map from '@/components/Map';
 import BookingDialog from '@/components/BookingDialog';
+import ParkingSessionFloat from '@/components/ParkingSessionFloat';
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bottomMenuHeight, setBottomMenuHeight] = useState(200);
   const [isDragging, setIsDragging] = useState(false);
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
-  const [mapSelectedSpot, setMapSelectedSpot] = useState<any>(null);
+  const [mapSelectedSpot, setMapSelectedSpot] = useState<{name: string, distance: string, driveTime: string, price: string, tags: string[], imageVariant: 'accent' | 'secondary' | 'primary'} | null>(null);
   
   // Breakpoints for the bottom menu
   const [menuBreakpoints, setMenuBreakpoints] = useState({
@@ -30,7 +31,8 @@ export default function Home() {
       });
 
       // Global function for map popup dialogs
-      (window as any).openParkingDialog = (name: string, distance: string, driveTime: string, price: string) => {
+      (window as Record<string, unknown>).openParkingDialog = (name: string, distance: string, driveTime: string, price: string) => {
+        console.log('🎯 openParkingDialog called with:', { name, distance, driveTime, price });
         const spot = {
           name,
           distance,
@@ -41,15 +43,41 @@ export default function Home() {
         };
         setMapSelectedSpot(spot);
         setMapDialogOpen(true);
+        console.log('✅ Dialog should be open now, mapDialogOpen set to true');
       };
+      
+      // Check for pending QR scan results
+      const checkForQRResult = () => {
+        const qrResult = (window as Record<string, unknown>).pendingQRResult as {spotId: string, spotData: any} | undefined;
+        if (qrResult) {
+          console.log('📱 Found pending QR result:', qrResult);
+          
+          // Focus on the parking spot
+          const focusFunction = (window as Record<string, unknown>).focusOnParkingSpot as ((spotId: string) => void) | undefined;
+          focusFunction?.(qrResult.spotId);
+          
+          // Open the dialog
+          const openDialogFunction = (window as Record<string, unknown>).openParkingDialog as ((name: string, distance: string, driveTime: string, price: string) => void) | undefined;
+          openDialogFunction?.(qrResult.spotData.name, qrResult.spotData.distance, qrResult.spotData.driveTime, qrResult.spotData.price);
+          
+          // Clear the pending result
+          (window as Record<string, unknown>).pendingQRResult = null;
+        }
+      };
+      
+      // Check immediately and set up interval
+      checkForQRResult();
+      const interval = setInterval(checkForQRResult, 100);
+      
+      setTimeout(() => clearInterval(interval), 5000); // Stop checking after 5 seconds
     }
   }, []);
 
-  const handleDragStart = (e) => {
+  const handleDragStart = () => {
     setIsDragging(true);
   };
 
-  const handleDragMove = (e) => {
+  const handleDragMove = (e: MouseEvent | TouchEvent) => {
     if (!isDragging) return;
     
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -105,7 +133,7 @@ export default function Home() {
         document.removeEventListener('touchend', handleDragEnd);
       };
     }
-  }, [isDragging]);
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-background">
@@ -154,6 +182,9 @@ export default function Home() {
         }}
         parkingSpot={mapSelectedSpot}
       />
+
+      {/* Floating Parking Session Indicator */}
+      <ParkingSessionFloat />
     </div>
   );
 }

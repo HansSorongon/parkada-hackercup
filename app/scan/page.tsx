@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Camera, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Scanner } from '@yudiel/react-qr-scanner';
@@ -12,16 +12,115 @@ export default function ScanPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleScan = (result: any) => {
-    console.log('QR Scan Result:', result);
+  const handleScan = (result: Array<{rawValue: string}> | null) => {
+    console.log('=== QR SCAN DEBUG ===');
+    console.log('Raw QR Scan Result:', result);
+    
     if (result && result.length > 0) {
-      console.log('Scanned Data:', result[0].rawValue);
-      setScanResult(result[0].rawValue);
+      const scannedData = result[0].rawValue;
+      console.log('Scanned Data:', scannedData);
+      console.log('Data Type:', typeof scannedData);
+      console.log('Data Length:', scannedData.length);
+      
+      setScanResult(scannedData);
       setIsScanning(false);
+      
+      // Check if scanned data is a parking location ID (format: PARK### )
+      const isValidParkingId = scannedData.match(/^PARK\d{3}$/);
+      console.log('Is Valid Parking ID?:', !!isValidParkingId);
+      console.log('Regex Match Result:', isValidParkingId);
+      
+      if (isValidParkingId) {
+        // Only proceed if window is available (client-side)
+        if (typeof window !== 'undefined') {
+          console.log('Window is available, proceeding...');
+          
+          // Get parking spot data from global window object
+          const parkingSpots = (window as Record<string, unknown>).parkingSpots as Array<{id: string, name: string, lat: number, lng: number, available: number, total: number, rate: string}> | undefined;
+          console.log('Available Parking Spots:', parkingSpots);
+          console.log('Number of spots found:', parkingSpots?.length || 0);
+          
+          if (parkingSpots) {
+            console.log('All spot IDs:', parkingSpots.map(s => s.id));
+          }
+          
+          const spot = parkingSpots?.find(s => s.id === scannedData);
+          console.log('Looking for spot with ID:', scannedData);
+          console.log('Found matching spot:', spot);
+          
+          if (spot) {
+            console.log('=== SPOT DATA ===');
+            console.log('Spot ID:', spot.id);
+            console.log('Spot Name:', spot.name);
+            console.log('Coordinates:', spot.lat, spot.lng);
+            console.log('Available/Total:', spot.available, '/', spot.total);
+            console.log('Rate:', spot.rate);
+            // Calculate distance and drive time from user location (Gokongwei Building)
+            const userLat = 14.566401265497952;
+            const userLng = 120.9932240439279;
+            
+            const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+              const dx = lat2 - lat1;
+              const dy = lng2 - lng1;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              return distance * 111000; // Convert to approximate meters
+            };
+            
+            const distanceInMeters = calculateDistance(userLat, userLng, spot.lat, spot.lng);
+            const distanceKm = distanceInMeters / 1000;
+            const driveTimeMinutes = Math.max(1, Math.round(distanceKm * 3)); // 3 min per km estimate
+            
+            const distanceText = distanceKm < 1 ? `${Math.round(distanceInMeters)}m` : `${distanceKm.toFixed(1)}km`;
+            const driveTimeText = `${driveTimeMinutes} min`;
+            
+            console.log('=== CALCULATED DATA ===');
+            console.log('Distance (meters):', distanceInMeters);
+            console.log('Distance (km):', distanceKm);
+            console.log('Distance Text:', distanceText);
+            console.log('Drive Time:', driveTimeText);
+            
+            // Focus on the parking spot on the map
+            const focusFunction = (window as Record<string, unknown>).focusOnParkingSpot as ((spotId: string) => void) | undefined;
+            // Store the result globally for the main page to pick up
+            const spotData = {
+              name: spot.name,
+              distance: distanceText,
+              driveTime: driveTimeText,
+              price: spot.rate
+            };
+            
+            console.log('=== STORING QR RESULT ===');
+            console.log('Spot ID:', scannedData);
+            console.log('Spot Data:', spotData);
+            
+            (window as Record<string, unknown>).pendingQRResult = {
+              spotId: scannedData,
+              spotData: spotData
+            };
+            
+            console.log('✅ QR result stored globally');
+            console.log('Navigating back to main page immediately...');
+            
+            // Navigate back to main page immediately
+            router.push('/');
+          } else {
+            console.log('❌ No matching parking spot found for ID:', scannedData);
+          }
+        } else {
+          console.log('❌ Window object not available');
+        }
+      } else {
+        console.log('❌ Scanned data is not a valid parking ID format');
+        console.log('Expected format: PARK### (e.g., PARK001)');
+        console.log('Received:', scannedData);
+      }
+    } else {
+      console.log('❌ No scan result or empty result');
     }
+    console.log('=== END QR SCAN DEBUG ===');
   };
 
-  const handleError = (error: any) => {
+  const handleError = (error: Error) => {
     console.error('QR Scanner Error:', error);
     setCameraError('Camera access denied or not available');
   };
