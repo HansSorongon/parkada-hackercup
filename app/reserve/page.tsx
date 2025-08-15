@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { TimePicker } from '@/components/ui/time-picker';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MockAuth } from '@/lib/auth';
+import { MockAuth, type UserVehicle } from '@/lib/auth';
 import {
   Select,
   SelectContent,
@@ -38,6 +38,7 @@ export default function ReservePage() {
   const [selectedTime, setSelectedTime] = useState<string>('09:00 AM');
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const [isReserving, setIsReserving] = useState(false);
+  const [userVehicles, setUserVehicles] = useState<UserVehicle[]>([]);
 
   useEffect(() => {
     const spotParam = searchParams.get('spot');
@@ -51,6 +52,13 @@ export default function ReservePage() {
       }
     } else {
       router.push('/');
+    }
+
+    // Load user vehicles
+    const currentUser = MockAuth.getCurrentUser();
+    if (currentUser) {
+      const vehicles = MockAuth.getUserVehicles(currentUser.id);
+      setUserVehicles(vehicles);
     }
   }, [searchParams, router]);
 
@@ -85,13 +93,6 @@ export default function ReservePage() {
     }
   };
 
-  // Sample user vehicles - in real app this would come from user profile
-  const userVehicles = [
-    { id: '1', plateNumber: 'ABC123', model: 'Honda Civic 2022' },
-    { id: '2', plateNumber: 'XYZ789', model: 'Toyota Camry 2021' },
-    { id: '3', plateNumber: 'DEF456', model: 'Mercedes-Benz E-Class AMG 53 4MATIC+ Sedan' },
-    { id: '4', plateNumber: 'GHI321', model: 'BMW X5' },
-  ];
 
   const truncateModel = (model: string, maxLength: number = 25) => {
     return model.length > maxLength ? model.substring(0, maxLength) + '...' : model;
@@ -277,23 +278,38 @@ export default function ReservePage() {
             <Car className="h-4 w-4" />
             Select Vehicle
           </h3>
-          <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Choose your vehicle" />
-            </SelectTrigger>
-            <SelectContent>
-              {userVehicles.map((vehicle) => (
-                <SelectItem key={vehicle.id} value={vehicle.id}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Car className="h-4 w-4 flex-shrink-0" />
-                    <span className="font-medium">{vehicle.plateNumber}</span>
-                    <span className="text-muted-foreground">-</span>
-                    <span className="truncate">{truncateModel(vehicle.model)}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {userVehicles.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No vehicles registered</p>
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="text-primary"
+                onClick={() => router.push('/profile')}
+              >
+                Add a vehicle in Profile
+              </Button>
+            </div>
+          ) : (
+            <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choose your vehicle" />
+              </SelectTrigger>
+              <SelectContent>
+                {userVehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Car className="h-4 w-4 flex-shrink-0" />
+                      <span className="font-medium">{vehicle.plateNumber}</span>
+                      <span className="text-muted-foreground">-</span>
+                      <span className="truncate">{truncateModel(`${vehicle.year} ${vehicle.model}`)}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Payment Method */}

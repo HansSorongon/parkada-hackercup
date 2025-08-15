@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, MapPin, Car, CreditCard, Play } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MockAuth } from '@/lib/auth';
+import { MockAuth, type UserVehicle } from '@/lib/auth';
 import { ParkingSessionManager } from '@/lib/parking-session';
 import {
   Select,
@@ -40,6 +40,7 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
   const router = useRouter();
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const [isStarting, setIsStarting] = useState(false);
+  const [userVehicles, setUserVehicles] = useState<UserVehicle[]>([]);
 
   const handleStartParking = async () => {
     const currentUser = MockAuth.getCurrentUser();
@@ -96,6 +97,14 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
     }
   };
 
+  useEffect(() => {
+    const currentUser = MockAuth.getCurrentUser();
+    if (currentUser && isOpen) {
+      const vehicles = MockAuth.getUserVehicles(currentUser.id);
+      setUserVehicles(vehicles);
+    }
+  }, [isOpen]);
+
   const handleReserveForLater = () => {
     if (!parkingSpot) return;
 
@@ -112,14 +121,6 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
     router.push(`/reserve?spot=${spotData}`);
     onClose();
   };
-  
-  // Sample user vehicles - in real app this would come from user profile
-  const userVehicles = [
-    { id: '1', plateNumber: 'ABC123', model: 'Honda Civic 2022' },
-    { id: '2', plateNumber: 'XYZ789', model: 'Toyota Camry 2021' },
-    { id: '3', plateNumber: 'DEF456', model: 'Mercedes-Benz E-Class AMG 53 4MATIC+ Sedan' },
-    { id: '4', plateNumber: 'GHI321', model: 'BMW X5' },
-  ];
 
   const truncateModel = (model: string, maxLength: number = 25) => {
     return model.length > maxLength ? model.substring(0, maxLength) + '...' : model;
@@ -221,23 +222,38 @@ export default function BookingDialog({ isOpen, onClose, parkingSpot }: BookingD
               <Car className="h-4 w-4" />
               Select Vehicle
             </h4>
-            <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choose your vehicle" />
-              </SelectTrigger>
-              <SelectContent>
-                {userVehicles.map((vehicle) => (
-                  <SelectItem key={vehicle.id} value={vehicle.id}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Car className="h-4 w-4 flex-shrink-0" />
-                      <span className="font-medium">{vehicle.plateNumber}</span>
-                      <span className="text-muted-foreground">-</span>
-                      <span className="truncate">{truncateModel(vehicle.model)}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {userVehicles.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No vehicles registered</p>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-primary"
+                  onClick={() => router.push('/profile')}
+                >
+                  Add a vehicle in Profile
+                </Button>
+              </div>
+            ) : (
+              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose your vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userVehicles.map((vehicle) => (
+                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Car className="h-4 w-4 flex-shrink-0" />
+                        <span className="font-medium">{vehicle.plateNumber}</span>
+                        <span className="text-muted-foreground">-</span>
+                        <span className="truncate">{truncateModel(`${vehicle.year} ${vehicle.model}`)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Payment Method */}

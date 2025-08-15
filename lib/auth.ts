@@ -9,6 +9,16 @@ export interface User {
   avatar?: string;
 }
 
+export interface UserVehicle {
+  id: string;
+  plateNumber: string;
+  model: string;
+  year: string;
+  color: string;
+  orcrNumber: string;
+  verified: boolean;
+}
+
 export interface RentalHistory {
   id: string;
   parkingSpotId: string;
@@ -254,5 +264,43 @@ export class MockAuth {
 
   static getAllUsers(): User[] {
     return [...MOCK_USERS];
+  }
+
+  static getUserVehicles(userId: string): UserVehicle[] {
+    if (typeof window === 'undefined') return [];
+    
+    const savedVehicles = localStorage.getItem(`user_vehicles_${userId}`);
+    return savedVehicles ? JSON.parse(savedVehicles) : [];
+  }
+
+  static isUserVerified(userId: string): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    return localStorage.getItem(`user_verified_${userId}`) === 'true';
+  }
+
+  static addUserVehicle(userId: string, vehicle: Omit<UserVehicle, 'id'>): UserVehicle {
+    if (typeof window === 'undefined') throw new Error('Not available on server side');
+    
+    const newVehicle: UserVehicle = {
+      ...vehicle,
+      id: Date.now().toString()
+    };
+    
+    const existingVehicles = this.getUserVehicles(userId);
+    const updatedVehicles = [...existingVehicles, newVehicle];
+    
+    localStorage.setItem(`user_vehicles_${userId}`, JSON.stringify(updatedVehicles));
+    
+    return newVehicle;
+  }
+
+  static removeUserVehicle(userId: string, vehicleId: string): void {
+    if (typeof window === 'undefined') return;
+    
+    const existingVehicles = this.getUserVehicles(userId);
+    const updatedVehicles = existingVehicles.filter(v => v.id !== vehicleId);
+    
+    localStorage.setItem(`user_vehicles_${userId}`, JSON.stringify(updatedVehicles));
   }
 }

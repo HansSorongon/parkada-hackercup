@@ -35,6 +35,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     router.push('/dashboard');
     onClose();
   };
+
+  const handleProfile = () => {
+    router.push('/profile');
+    onClose();
+  };
   return (
     <>
       {/* Sidebar */}
@@ -60,7 +65,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="p-4">
           {/* User Profile Section */}
           {currentUser && (
-            <div className="mb-4 p-3 bg-sidebar-accent rounded-lg">
+            <div 
+              className="mb-4 p-3 bg-sidebar-accent rounded-lg cursor-pointer hover:bg-sidebar-accent/80 transition-colors"
+              onClick={handleProfile}
+            >
               <div className="flex items-center gap-3">
                 {currentUser.avatar && (
                   <img 
@@ -135,12 +143,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </li>
                 )}
 
-                <li>
-                  <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-sidebar-accent text-sidebar-foreground h-auto p-3 font-bold">
-                    <User className="h-5 w-5 stroke-[2.5]" />
-                    Profile
-                  </Button>
-                </li>
                 <li>
                   <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-sidebar-accent text-sidebar-foreground h-auto p-3 font-bold">
                     <Settings className="h-5 w-5 stroke-[2.5]" />
