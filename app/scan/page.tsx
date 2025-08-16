@@ -25,8 +25,8 @@ export default function ScanPage() {
       setScanResult(scannedData);
       setIsScanning(false);
       
-      // Check if scanned data is a parking location ID (format: PARK### )
-      const isValidParkingId = scannedData.match(/^PARK\d{3}$/);
+      // Check if scanned data is a parking location ID (format: PARK### or RENT###ABC)
+      const isValidParkingId = scannedData.match(/^PARK\d{3}$/) || scannedData.match(/^RENT\d{3}[A-Z]{3}$/);
       console.log('Is Valid Parking ID?:', !!isValidParkingId);
       console.log('Regex Match Result:', isValidParkingId);
       
@@ -35,16 +35,22 @@ export default function ScanPage() {
         if (typeof window !== 'undefined') {
           console.log('Window is available, proceeding...');
           
-          // Get parking spot data from global window object
+          // Get parking spot data from global window object and localStorage
           const parkingSpots = (window as Record<string, unknown>).parkingSpots as Array<{id: string, name: string, lat: number, lng: number, available: number, total: number, rate: string}> | undefined;
-          console.log('Available Parking Spots:', parkingSpots);
-          console.log('Number of spots found:', parkingSpots?.length || 0);
+          const rentorSpots = JSON.parse(localStorage.getItem('rentorParkingSpots') || '[]') as Array<{id: string, name: string, lat: number, lng: number, available: number, total: number, rate: string}>;
           
-          if (parkingSpots) {
-            console.log('All spot IDs:', parkingSpots.map(s => s.id));
+          // Combine both spot types
+          const allSpots = [...(parkingSpots || []), ...rentorSpots];
+          
+          console.log('Available Parking Spots:', parkingSpots);
+          console.log('Available Rentor Spots:', rentorSpots);
+          console.log('Total spots found:', allSpots.length);
+          
+          if (allSpots.length > 0) {
+            console.log('All spot IDs:', allSpots.map(s => s.id));
           }
           
-          const spot = parkingSpots?.find(s => s.id === scannedData);
+          const spot = allSpots.find(s => s.id === scannedData);
           console.log('Looking for spot with ID:', scannedData);
           console.log('Found matching spot:', spot);
           
@@ -111,7 +117,7 @@ export default function ScanPage() {
         }
       } else {
         console.log('❌ Scanned data is not a valid parking ID format');
-        console.log('Expected format: PARK### (e.g., PARK001)');
+        console.log('Expected format: PARK### (e.g., PARK001) or RENT###ABC (e.g., RENT123ABC)');
         console.log('Received:', scannedData);
       }
     } else {
