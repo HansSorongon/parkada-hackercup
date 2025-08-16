@@ -103,13 +103,16 @@ export class ParkingSessionManager {
     const startTime = new Date(activeSession.startTime);
     const durationMs = endTime.getTime() - startTime.getTime();
     const durationHours = durationMs / (1000 * 60 * 60);
-    const totalCost = durationHours * activeSession.hourlyRate;
+    
+    // Apply minimum billing: minimum 1 hour charge even if parked for less
+    const billedHours = Math.max(1, durationHours);
+    const totalCost = billedHours * activeSession.hourlyRate;
 
     const completedSession: ParkingSession = {
       ...activeSession,
       endTime: endTime.toISOString(),
-      duration: Math.round(durationHours * 100) / 100, // Round to 2 decimal places
-      totalCost: Math.round(totalCost * 100) / 100,
+      duration: Math.round(durationHours * 100) / 100, // Actual duration for display
+      totalCost: Math.round(totalCost * 100) / 100, // Cost based on minimum billing
       status: 'completed'
     };
 

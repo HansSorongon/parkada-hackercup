@@ -5,6 +5,7 @@ import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, MapPin, Building
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { MockAuth, type User } from '@/lib/auth';
+import PropertyQRCode from '@/components/PropertyQRCode';
 
 export default function RentorPage() {
   const router = useRouter();
@@ -29,6 +30,8 @@ export default function RentorPage() {
   const [addressSearchResults, setAddressSearchResults] = useState<Array<{display_name: string, lat: string, lon: string}>>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<{display_name: string, lat: string, lon: string} | null>(null);
+  const [approvedPropertyId, setApprovedPropertyId] = useState<string | null>(null);
+  const [approvedPropertyName, setApprovedPropertyName] = useState<string>('');
 
   useEffect(() => {
     const user = MockAuth.getCurrentUser();
@@ -112,9 +115,12 @@ export default function RentorPage() {
       
       if (isApproved && coordinates && selectedAddress && currentUser) {
         // Save approved application to storage
+        const propertyId = `RENT${Date.now().toString().slice(-3)}${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
+        const propertyName = formData.propertyOwner + "'s " + formData.propertyType.charAt(0).toUpperCase() + formData.propertyType.slice(1);
+        
         const approvedApplication = {
-          id: `RENT${Date.now().toString().slice(-3)}`, // Generate ID like RENT001, RENT002, etc.
-          name: formData.propertyOwner + "'s " + formData.propertyType.charAt(0).toUpperCase() + formData.propertyType.slice(1),
+          id: propertyId,
+          name: propertyName,
           lat: coordinates.lat,
           lng: coordinates.lng,
           available: parseInt(formData.availableSpaces) || 0,
@@ -129,6 +135,10 @@ export default function RentorPage() {
           userId: currentUser.id,
           userEmail: currentUser.email
         };
+        
+        // Store the approved property info for QR code display
+        setApprovedPropertyId(propertyId);
+        setApprovedPropertyName(propertyName);
         
         // Store in localStorage and update global parking spots
         if (typeof window !== 'undefined') {
@@ -558,17 +568,12 @@ export default function RentorPage() {
               </div>
             )}
 
-            {verificationResult === 'verified' && (
-              <div className="bg-green-50 border border-green-200 p-4 rounded-lg text-center">
-                <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                <h3 className="font-medium text-green-800">Application Approved!</h3>
-                <p className="text-sm text-green-600 mb-4">
-                  Congratulations! Your property has been verified and will be added to our platform.
-                </p>
-                <Button onClick={goBack} className="w-full">
-                  Return to Main Page
-                </Button>
-              </div>
+            {verificationResult === 'verified' && approvedPropertyId && (
+              <PropertyQRCode 
+                propertyId={approvedPropertyId}
+                propertyName={approvedPropertyName}
+                onClose={goBack}
+              />
             )}
 
             {verificationResult === 'rejected' && (
